@@ -1,0 +1,91 @@
+import os
+import requests
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+
+# ሚስጥራዊ መረጃዎችን ከ environment variables መውሰድ (Security)
+TELEGRAM_BOT_TOKEN = os.getenv("BOT_TOKEN")
+CHAPA_SECRET_KEY = os.getenv("CHAPA_SECRET_KEY")
+BOOK_PRICE = 490.00  # በ ETB
+CURRENCY = "ETB"
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    keyboard = [
+        [InlineKeyboardButton("📚 «እልፍ በል» መጽሐፍን ግዛ (490 ETB)", callback_data="buy_book")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(
+        "እንኳን ደህና መጡ! «እልፍ በል» መጽሐፍን ለመግዛት ከታች ያለውን ቁልፍ ይጫኑ።",
+        reply_markup=reply_markup
+    )
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == "buy_book":
+        user = query.from_user
+        tx_ref = f"elf-en-bel-{user.id}-{int(query.message.date.timestamp())}"
+        
+        # Chapa API ክፍያ ማገናኛ ጥያቄ
+        headers = {
+            "Authorization": f"Bearer {CHAPA_SECRET_KEY}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "amount": str(BOOK_PRICE),
+            "currency": CURRENCY,
+            "email": f"user_{user.id}@telegram.bot",
+            "first_name": user.first_name or "ገዢ",
+            "last_name": user.last_name or "",
+            "tx_ref": tx_ref
+        }
+
+        response = requests.post("https://api.chapa.co/v1/transaction/initialize", json=payload, headers=headers)
+        data = response.json()
+
+        if data.get("status") == "success":
+            checkout_url = data["data"]["checkout_url"]
+            keyboard = [
+                [InlineKeyboardButton("💳 ⤶ ክፍያ ፈጽም (Pay Now)", url=checkout_url)],
+                [InlineKeyboardButton("🔄 ክፍያ አረጋግጥ (Verify Payment)", callback_data=f"verify_{tx_ref}")]
+            ]
+            await query.edit_message_text(
+                "እባክዎ ከታች ባለው ሊንክ በመጠቀም ክፍያውን ይፈጽሙ፤ ከጨረሱ በኋላ 'ክፍያ አረጋግጥ' የሚለውን ይጫኑ።",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+        else:
+            await query.edit_message_text("የክፍያ ማገናኛ መፍጠር አልተቻለም። እባክዎ ትንሽ ቆይተው እንደገና ይሞክሩ።")
+
+async def verify_payment(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+    
+    tx_ref = query.data.split("_")[1]
+    
+    # የክፍያ ማረጋገጫ በ Chapa API በኩል
+    headers = {"Authorization": f"Bearer {CHAPA_SECRET_KEY}"}
+    response = requests.get(f"https://api.chapa.co/v1/transaction/verify/{tx_ref}", headers=headers)
+    data = response.json()
+
+    if data.get("status") == "success" and data.get("data", {}).get("status") == "success":
+        await query.edit_message_text("ክፍያዎ ተሳክቷል! መጽሐፉን በመላክ ላይ...")
+        # መጽሐፉን በደህንነት ጥበቃ (protect_content=True) መላክ
+        await context.bot.send_document(
+            chat_id=query.from_user.id,
+            document=open("content/book.pdf", "rb"),
+            caption="እነሆ «እልፍ በል» መጽሐፍ። መልካም ንባብ!",
+            protect_content=True
+        )
+    else:
+        await query.edit_message_text("ክፍያው ገና አልተጠናቀቀም ወይም አልተሳካም። እባክዎ ትክክለኛውን ክፍያ ፈጽመው እንደገና ይሞክሩ።")
+
+def main():
+    app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(button_handler, pattern="^buy_book$"))
+    app.add_handler(CallbackQueryHandler(verify_payment, pattern="^verify_"))
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()
