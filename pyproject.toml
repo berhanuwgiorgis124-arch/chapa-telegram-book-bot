@@ -1,0 +1,8 @@
+[project]
+name = "elf-en-bel-book-bot"
+version = "0.1.0"
+description = "Telegram bot for the Amharic book እልፍ በል"
+requires-python = ">=3.13"
+dependencies = [
+    "python-telegram-bot>=22.8,<23",
+]
