@@ -4,7 +4,7 @@ modules = ["nodejs-24", "python-base-3.13"]
 router = "application"
 deploymentTarget = "vm"
 build = "uv sync --locked"
-run = "uv run --locked python main.py"
+run = "uv run --locked python bot.py"
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]

@@ -6,3 +6,4 @@
 .pythonlibs
 .venv
 __pycache__
+/data

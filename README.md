@@ -1,26 +1,40 @@
 # «እልፍ በል» Telegram Book Bot
 
-A Telegram bot that introduces the Amharic book «እልፍ በል» and its 490 ETB
-price.
+A Telegram bot that accepts a 490 ETB payment through Chapa and delivers the
+Amharic book PDF after verifying the transaction.
 
 ## Run
 
-1. Add the Telegram bot token to Replit Secrets as `BOT_TOKEN`.
-2. Start the **Telegram Book Bot** workflow, or run:
+1. Add `BOT_TOKEN` and `CHAPA_SECRET_KEY` to Replit Secrets.
+2. Add the book PDF at `content/book.pdf`. Checkout stays disabled until this
+   file exists.
+3. Start the **Telegram Book Bot** workflow, or run:
 
    ```sh
-   uv run --locked python main.py
+   uv run --locked python bot.py
    ```
 
-3. Open the bot in Telegram and send `/start`.
+4. Open the bot in Telegram and send `/start`.
 
 The bot uses Telegram long polling and is configured for a Replit VM deployment,
 which supports continuously running bot processes.
 
-## Payment status
+## Payment and delivery safeguards
 
-Checkout and PDF delivery are intentionally disabled. No payment provider was
-connected, and the bot will clearly tell customers not to pay. Do not enable
-payments until a supported payment provider is connected, successful payments
-are verified against the expected amount and currency, and the book PDF is
-available for delivery.
+- Chapa calls use `httpx.AsyncClient` with a timeout; the bot event loop is not
+  blocked by synchronous HTTP requests.
+- The verify action checks Chapa's success status, exact `tx_ref`, 490 ETB
+  amount, and ETB currency before fulfillment.
+- A SQLite order ledger prevents repeated verification clicks from sending a
+  second copy after delivery.
+- The PDF is sent with Telegram's `protect_content=True` option. This discourages
+  forwarding and saving in Telegram, but cannot prevent screenshots or other
+  forms of copying.
+- The PDF is not included in the source files. No checkout link is created until
+  `content/book.pdf` is present.
+
+Run the tests with:
+
+```sh
+uv run --locked python -m unittest discover -v
+```

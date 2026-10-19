@@ -29,6 +29,21 @@ wheels = [
 ]
 
 [[package]]
+name = "elf-en-bel-book-bot"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "httpx" },
+    { name = "python-telegram-bot" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "python-telegram-bot", specifier = ">=22.8,<23" },
+]
+
+[[package]]
 name = "h11"
 version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -86,17 +101,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/ba/77/153517bb1ac1bba67
 wheels = [
     { url = "https://files.pythonhosted.org/packages/60/7c/ed7d4dd94280bd434173cae9f7a7aedaaab9af128ae4f494423a5687c820/python_telegram_bot-22.8-py3-none-any.whl", hash = "sha256:42373918097f1b837cc4e717d588c19ea79651497ec712bb5b0c76e5e63c50e1", size = 769397, upload-time = "2026-06-12T08:10:27.066Z" },
 ]
-
-[[package]]
-name = "repl-nix-workspace"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "python-telegram-bot" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "python-telegram-bot", specifier = ">=22.8" }]
 
 [[package]]
 name = "typing-extensions"
