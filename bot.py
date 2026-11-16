@@ -40,7 +40,7 @@ PDF_MISSING_MESSAGE = (
     "ፋይሉ ከተዘጋጀ በኋላ ይህ አገልግሎት ይነቃል።"
 )
 CHECKOUT_ERROR_MESSAGE = (
-    "የክፍያ ማገናኛ መፍጠር አልተቻለም። እባክዎ ትንሽ ቆይተው እንደገና ይሞክሩ።"
+    "የክፍያ ሊንክ ማመንጨት አልተቻለም። እባክዎ ቆይተው እንደገና ይሞክሩ።"
 )
 PAYMENT_PENDING_MESSAGE = (
     "ክፍያው ገና አልተረጋገጠም። ክፍያውን ከፈጸሙ በኋላ እንደገና ያረጋግጡ።"
@@ -54,7 +54,10 @@ logger = logging.getLogger(__name__)
 
 
 class ChapaError(RuntimeError):
-    """Raised when Chapa cannot return a usable API response."""
+    def __init__(self, category: str, status_code: int | None = None) -> None:
+        self.category = category
+        self.status_code = status_code
+        super().__init__(category)
 
 
 @dataclass(frozen=True)
@@ -68,7 +71,7 @@ class Order:
 
 
 class OrderStore:
-    """Small SQLite order ledger for payment and delivery idempotency."""
+    """SQLite ledger to keep payment and fulfillment retries idempotent."""
 
     def __init__(self, path: str | Path = "data/orders.sqlite3") -> None:
         self.path = str(path)
@@ -92,7 +95,8 @@ class OrderStore:
             """
         )
         self.connection.execute(
-            "CREATE INDEX IF NOT EXISTS orders_by_user ON orders(telegram_user_id, created_at)"
+            "CREATE INDEX IF NOT EXISTS orders_by_user "
+            "ON orders(telegram_user_id, created_at)"
         )
         self.connection.commit()
 
@@ -265,10 +269,9 @@ class ChapaClient:
             "Authorization": f"Bearer {self.secret_key}",
             "Content-Type": "application/json",
         }
-        timeout = httpx.Timeout(20.0, connect=5.0)
         try:
             async with httpx.AsyncClient(
-                timeout=timeout,
+                timeout=httpx.Timeout(20.0, connect=5.0),
                 transport=self.transport,
             ) as client:
                 response = await client.request(
@@ -280,16 +283,14 @@ class ChapaClient:
                 response.raise_for_status()
                 body = response.json()
         except httpx.HTTPStatusError as error:
-            raise ChapaError(
-                f"Chapa returned HTTP {error.response.status_code}."
-            ) from None
-        except (httpx.HTTPError, ValueError) as error:
-            raise ChapaError(
-                f"Chapa request failed ({type(error).__name__})."
-            ) from None
+            raise ChapaError("http_status", error.response.status_code) from None
+        except httpx.HTTPError as error:
+            raise ChapaError(type(error).__name__) from None
+        except ValueError:
+            raise ChapaError("invalid_json") from None
 
         if not isinstance(body, dict):
-            raise ChapaError("Chapa returned an invalid response.")
+            raise ChapaError("invalid_response")
         return body
 
     async def initialize(
@@ -316,17 +317,14 @@ class ChapaClient:
         )
         data = payload.get("data")
         checkout_url = data.get("checkout_url") if isinstance(data, dict) else None
-        if payload.get("status") != "success" or not self._is_chapa_checkout_url(
-            checkout_url
-        ):
-            raise ChapaError("Chapa did not return a valid checkout link.")
+        if payload.get("status") != "success":
+            raise ChapaError("provider_rejected")
+        if not self._is_chapa_checkout_url(checkout_url):
+            raise ChapaError("invalid_checkout_url")
         return checkout_url
 
     async def verify(self, tx_ref: str) -> dict[str, Any]:
-        return await self._request_json(
-            "GET",
-            f"{VERIFY_URL}/{tx_ref}",
-        )
+        return await self._request_json("GET", f"{VERIFY_URL}/{tx_ref}")
 
     @staticmethod
     def _is_chapa_checkout_url(value: object) -> bool:
@@ -334,9 +332,8 @@ class ChapaClient:
             return False
         parsed = urlsplit(value)
         host = (parsed.hostname or "").lower()
-        return (
-            parsed.scheme == "https"
-            and (host == "chapa.co" or host.endswith(".chapa.co"))
+        return parsed.scheme == "https" and (
+            host == "chapa.co" or host.endswith(".chapa.co")
         )
 
 
@@ -421,7 +418,7 @@ async def _show_existing_order(query: Any, order: Order) -> None:
         )
     elif order.status == "initializing":
         await query.edit_message_text(
-            "የክፍያ ማገናኛው እየተዘጋጀ ነው። እባክዎ ትንሽ ቆይተው እንደገና ይሞክሩ።"
+            "የክፍያ ማገናኛው እየተዘጋጀ ነው። እባክዎ ትንሽ ቆይተው ይሞክሩ።"
         )
     elif order.status == "paid":
         await query.edit_message_text(
@@ -454,7 +451,6 @@ async def purchase_notice(
     pdf_path: Path = context.application.bot_data["book_pdf_path"]
     user = query.from_user
 
-    # Never create a charge if there is no deliverable file.
     if not pdf_path.is_file():
         await query.edit_message_text(PDF_MISSING_MESSAGE)
         return
@@ -477,7 +473,11 @@ async def purchase_notice(
         )
     except ChapaError as error:
         order_store.mark_failed(order.tx_ref)
-        logger.warning("Chapa checkout initialization failed (%s)", error)
+        logger.warning(
+            "Chapa checkout initialization failed (category=%s, status=%s)",
+            error.category,
+            error.status_code,
+        )
         await query.edit_message_text(CHECKOUT_ERROR_MESSAGE)
         return
 
@@ -526,7 +526,11 @@ async def verify_payment(
         try:
             verification = await chapa.verify(tx_ref)
         except ChapaError as error:
-            logger.warning("Chapa verification request failed (%s)", error)
+            logger.warning(
+                "Chapa verification failed (category=%s, status=%s)",
+                error.category,
+                error.status_code,
+            )
             await query.edit_message_text(PAYMENT_PENDING_MESSAGE)
             return
 
@@ -615,10 +619,7 @@ def build_application(
     )
     application.add_handler(CommandHandler(["start", "help"], start_command))
     application.add_handler(
-        CallbackQueryHandler(
-            purchase_notice,
-            pattern=f"^{BUY_BOOK_CALLBACK}$",
-        )
+        CallbackQueryHandler(purchase_notice, pattern=f"^{BUY_BOOK_CALLBACK}$")
     )
     application.add_handler(
         CallbackQueryHandler(verify_payment, pattern=r"^verify:")
