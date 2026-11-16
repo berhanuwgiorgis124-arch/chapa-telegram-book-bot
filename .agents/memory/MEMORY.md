@@ -1,0 +1,1 @@
+- [Python Telegram package collision](telegram-package-collision.md) — `python-telegram-bot` owns the `telegram` namespace; avoid the unrelated `telegram` distribution.

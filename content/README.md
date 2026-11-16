@@ -1,4 +1,4 @@
-Place the authorized book PDF here as `book.pdf`.
+The bot reads the PDF from the project root as `book.pdf` by default.
 
-The bot refuses to create a Chapa checkout link until this file is present, so
-customers cannot pay while the deliverable is missing.
+If you keep the file in this directory instead, set `BOOK_PDF_PATH=content/book.pdf`
+in the environment. Checkout remains disabled until the configured PDF exists.

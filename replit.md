@@ -12,8 +12,9 @@ A Telegram bot that accepts a 490 ETB Chapa payment for the Amharic book «እ�
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - Required secrets: `BOT_TOKEN`, `CHAPA_SECRET_KEY`
-- Required file: `content/book.pdf` — checkout is blocked until the file exists
-- Deployment target: VM, for the bot's long-running Telegram polling process
+- Required file: `book.pdf` — checkout is blocked until the file exists
+- Recommended deployment target: VM, because Telegram long polling needs a continuously running process
+- The bot currently runs as a development workflow; production services in this pnpm workspace are configured per artifact
 
 ## Stack
 
@@ -30,7 +31,7 @@ A Telegram bot that accepts a 490 ETB Chapa payment for the Amharic book «እ�
 - `bot.py` — Telegram handlers, Chapa HTTP client, order ledger, and PDF fulfillment
 - `test_bot.py` — bot, payment validation, and API request tests
 - `pyproject.toml` and `uv.lock` — Python dependencies
-- `content/book.pdf` — book file to deliver (not included in the provided source)
+- `book.pdf` — book file to deliver
 - `data/orders.sqlite3` — local payment and fulfillment ledger (generated at runtime)
 - `artifacts/api-server` — shared Express API service
 
@@ -38,11 +39,12 @@ A Telegram bot that accepts a 490 ETB Chapa payment for the Amharic book «እ�
 
 - Verify Chapa's transaction reference, status, amount, and currency before delivering the book.
 - The bot is configured for VM deployment because Telegram long polling needs a continuously running process.
+- Chapa initialization intentionally sends only the core transaction fields; the optional nested `customization` object caused HTTP 400, while the minimal payload returned a hosted checkout URL.
 
 ## Product
 
 - `/start` and `/help` show the book and its 490 ETB price.
-- Checkout and PDF delivery require `content/book.pdf`; purchases are blocked until it exists.
+- Checkout and PDF delivery require `book.pdf`; purchases are blocked until it exists.
 
 ## User preferences
 

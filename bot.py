@@ -50,6 +50,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     level=logging.INFO,
 )
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 
@@ -309,10 +310,6 @@ class ChapaClient:
                 "tx_ref": tx_ref,
                 "first_name": first_name or "ገዢ",
                 "last_name": last_name or "",
-                "customization": {
-                    "title": BOOK_TITLE,
-                    "description": "የአማርኛ መጽሐፍ ግዢ",
-                },
             },
         )
         data = payload.get("data")
@@ -615,7 +612,7 @@ def build_application(
         os.getenv("ORDER_DB_PATH", "data/orders.sqlite3")
     )
     application.bot_data["book_pdf_path"] = Path(
-        pdf_path or os.getenv("BOOK_PDF_PATH", "content/book.pdf")
+        pdf_path or os.getenv("BOOK_PDF_PATH", "book.pdf")
     )
     application.add_handler(CommandHandler(["start", "help"], start_command))
     application.add_handler(

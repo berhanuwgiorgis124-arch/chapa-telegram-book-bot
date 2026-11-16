@@ -6,7 +6,7 @@ Amharic book PDF after verifying the transaction.
 ## Run
 
 1. Add `BOT_TOKEN` and `CHAPA_SECRET_KEY` to Replit Secrets.
-2. Add the book PDF at `content/book.pdf`. Checkout stays disabled until this
+2. Add the book PDF as `book.pdf` in the project root. Checkout stays disabled until this
    file exists.
 3. Start the **Telegram Book Bot** workflow, or run:
 
@@ -16,8 +16,9 @@ Amharic book PDF after verifying the transaction.
 
 4. Open the bot in Telegram and send `/start`.
 
-The bot uses Telegram long polling and is configured for a Replit VM deployment,
-which supports continuously running bot processes.
+The **Telegram Book Bot** workflow runs long polling in the development
+workspace. Production deployment should use an always-on VM service; the existing
+API artifact currently has its own Node.js production command.
 
 ## Payment and delivery safeguards
 
@@ -30,8 +31,7 @@ which supports continuously running bot processes.
 - The PDF is sent with Telegram's `protect_content=True` option. This discourages
   forwarding and saving in Telegram, but cannot prevent screenshots or other
   forms of copying.
-- The PDF is not included in the source files. No checkout link is created until
-  `content/book.pdf` is present.
+- Checkout is blocked until `book.pdf` is present.
 
 Run the tests with:
 

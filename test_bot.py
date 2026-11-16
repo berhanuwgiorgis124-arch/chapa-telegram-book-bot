@@ -215,6 +215,7 @@ class ChapaClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload["amount"], "490.00")
         self.assertEqual(payload["currency"], CURRENCY)
         self.assertEqual(payload["tx_ref"], tx_ref)
+        self.assertNotIn("customization", payload)
 
     async def test_verify_calls_official_reference_endpoint(self) -> None:
         seen_requests: list[httpx.Request] = []
