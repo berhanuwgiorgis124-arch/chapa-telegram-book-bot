@@ -1,4 +1,33 @@
-from __future__ import annotations
+
+from flask import Flask
+from threading import Thread
+import os
+
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is active!"
+
+@app.route('/health')
+def health():
+    return "OK", 200
+
+def run():
+    app.run(
+        host='0.0.0.0',
+        port=int(os.environ.get('PORT', 8080)),
+        use_reloader=False
+    )
+
+def keep_alive():
+    Thread(target=run, daemon=True).start()
+
+keep_alive()
+
+@app.route('/health')
+def health():
+    return "OK", 200
 
 import logging
 import os
@@ -624,7 +653,6 @@ def build_application(
     application.add_error_handler(log_handler_error)
     return application
 
-
 def main() -> None:
     application = build_application()
     logger.info("Starting the Telegram book bot.")
@@ -632,4 +660,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    keep_alive()
     main()
+    
