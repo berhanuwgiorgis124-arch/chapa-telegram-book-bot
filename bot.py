@@ -45,8 +45,8 @@ if name == 'main':
     t = threading.Thread(target=run_flask)
     t.start()
 
-    # የቦቱን ቶከን እዚህ ያስገቡ
-    TOKEN = "YOUR_BOT_TOKEN_HERE"
+    # የሰጡት ትክክለኛ የቦት ቶከን እዚህ ገብቷል
+    TOKEN = "8631290638:AAFeaCddTXKXvLr07DCYg9kXxPoiJXfx8T8"
     
     application = ApplicationBuilder().token(TOKEN).build()
     application.add_handler(CommandHandler("start", start))
