@@ -6,7 +6,8 @@ from flask import Flask
 import threading
 
 # 1. ሰርቨሩ እንዳይተኛ የሚረዳ የ Flask ድረ-ገጽ ክፍል
-app = Flask(name)
+app = Flask(__name__)
+
 
 @app.route('/')
 def home():
