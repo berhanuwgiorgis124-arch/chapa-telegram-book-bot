@@ -1,12 +1,12 @@
-import logging
 import os
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
+import logging
 from flask import Flask
-import threading
 
-# 1. ሰርቨሩ እንዳይተኛ የሚረዳ የ Flask ድረ-ገጽ ክፍል
 app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "Bot Server is Running!"
 @app.route('/')
 def home():
     return "Bot is alive and running 24/7!"
