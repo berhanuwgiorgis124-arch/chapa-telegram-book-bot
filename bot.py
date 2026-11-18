@@ -41,7 +41,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(welcome_message, reply_markup=reply_markup)
 
-if name == 'main':
+if __name__ == '__main__':
     # Flask ን በጀርባ (Background) ማስኬድ
     t = threading.Thread(target=run_flask)
     t.start()
