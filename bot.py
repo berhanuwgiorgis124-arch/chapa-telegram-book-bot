@@ -43,6 +43,26 @@ if __name__ == '__main__':
     # Flask ን በጀርባ (Background) ማስኬድ
     t = threading.Thread(target=run_flask)
     t.start()
+from flask import Flask
+import os
+from threading import Thread
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is running 24/7!"
+
+def run():
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+if __name__ == "__main__":
+    keep_alive()
+    # ከዚህ በታች የእርስዎን የቦት ማስጀመሪያ ኮድ ያስገቡ (ለምሳሌ: bot.infinity_polling() ወይም ኡቪ run)
 
     # የሰጡት ትክክለኛ የቦት ቶከን እዚህ ገብቷል
     TOKEN = "8631290638:AAFeaCddTXKXvLr07DCYg9kXxPoiJXfx8T8"
